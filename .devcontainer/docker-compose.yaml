@@ -1,0 +1,56 @@
+services:
+  workspace:
+    build:
+      context: ./workspace
+      dockerfile: Dockerfile
+    container_name: hermes-workspace
+    environment:
+      # Hermes legt seinen State (config.yaml, sessions.db, logs, memories,
+      # skills, .env) unter HERMES_HOME ab. Per Default ~/.hermes — wir halten
+      # das via Bind-Mount (./.hermes) persistent, siehe volumes unten.
+      HERMES_HOME: "/home/developer/.hermes"
+      # --- LLM-Provider (aus .env, NICHT committen) ---
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      NOUS_API_KEY: "${NOUS_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      # --- Gitea (optional, wie in den anderen Immeditech-Projekten) ---
+      GITEA_HOST: "https://gitea.immeditech.ch"
+      GITEA_ACCESS_TOKEN: "${GITEA_ACCESS_TOKEN:-}"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ../:/workspace
+      # Claude-Code-State persistent halten (überlebt Container-Rebuilds).
+      # ~/.claude.json (OAuth, Onboarding, MCP-Liste, Per-Projekt-State) liegt
+      # nicht in ~/.claude/, würde also vom Mount nicht erfasst. Lösung:
+      # post-create.sh symlinkt ~/.claude.json → ~/.claude/.claude.json, sodass
+      # die Datei im persistenten Mount lebt — siehe scripts/post-create.sh.
+      - ./.claude:/home/developer/.claude
+      # Hermes-State (Config, Sessions-DB, Memories, Skills) persistent halten.
+      - ./.hermes:/home/developer/.hermes
+    working_dir: /workspace
+    configs:
+      - source: gitconfig
+        target: /home/developer/.gitconfig
+        mode: 0644
+    # Dashboard (hermes dashboard) bindet auf 127.0.0.1:9119. Damit es im
+    # Devcontainer erreichbar ist, das Mapping hier explizit veröffentlichen.
+    ports:
+      - "9119:9119"
+
+configs:
+  gitconfig:
+    content: |
+      [user]
+          email = ${GIT_USER_EMAIL:-developer@example.com}
+          name = ${GIT_USER_NAME:-Developer}
+      [init]
+          defaultBranch = main
+      [pull]
+          rebase = false
+      [safe]
+          directory = /workspace
+      [credential]
+          helper = store
