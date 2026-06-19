@@ -7864,8 +7864,19 @@ def _resolve_update_branch(args) -> str:
     or whitespace-only values as the default" parsing so every consumer of
     ``--branch`` (check path, git-update path, ZIP-fallback path) agrees on
     the same answer.
+
+    immeditech fork: when no explicit ``--branch`` is given, fall back to the
+    ``HERMES_UPDATE_BRANCH`` env var before defaulting to ``main``. The Ansible
+    role (immeditech.internal.hermes) sets it to our fork branch in
+    ``~/.hermes/.env`` (loaded by ``load_hermes_dotenv`` for every CLI run), so
+    a bare ``hermes update`` tracks our branch instead of jumping to the
+    upstream-mirror ``main``. Explicit ``--branch`` still wins.
     """
-    return (getattr(args, "branch", None) or "main").strip() or "main"
+    return (
+        getattr(args, "branch", None)
+        or os.environ.get("HERMES_UPDATE_BRANCH")
+        or "main"
+    ).strip() or "main"
 
 
 def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
