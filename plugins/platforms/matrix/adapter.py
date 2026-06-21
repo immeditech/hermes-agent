@@ -3747,7 +3747,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if not self._client:
             return
 
-        dm_data: Dict[str, List[str]] = {}
+        dm_data: Dict[str, list] = {}
         try:
             resp = await self._client.get_account_data("m.direct")
             if hasattr(resp, "content") and isinstance(resp.content, dict):
