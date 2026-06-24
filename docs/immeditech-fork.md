@@ -23,6 +23,7 @@ Sync-Skript: [`scripts/sync-immeditech-main.sh`](../scripts/sync-immeditech-main
 (Array `UPSTREAM_PRS`). Aktuell:
 
 - [#44700](https://github.com/NousResearch/hermes-agent/pull/44700) — fix(matrix): record DM rooms in m.direct on invite
+- [#47755](https://github.com/NousResearch/hermes-agent/pull/47755) — fix(mcp-oauth): allow configurable redirect_uri for MCP OAuth flows
 
 ## Aktualisieren (wenn `main` sich bewegt)
 

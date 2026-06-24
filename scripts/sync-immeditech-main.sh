@@ -28,6 +28,7 @@ set -euo pipefail
 # Hier neue PRs ergänzen / erledigte entfernen.
 UPSTREAM_PRS=(
   44700  # fix(matrix): record DM rooms in m.direct on invite to prevent group misclassification
+  47755  # fix(mcp-oauth): allow configurable redirect_uri for MCP OAuth flows
 )
 
 ORIGIN_REMOTE="origin"      # immeditech/hermes-agent
