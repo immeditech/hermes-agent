@@ -631,6 +631,41 @@ def test_configure_callback_port_uses_explicit_port():
     assert cfg["_resolved_port"] == 54321
 
 
+def test_configure_callback_port_sets_bind_host_from_config():
+    """redirect_bind is resolved into the module-level _oauth_bind_host."""
+    import tools.mcp_oauth as mod
+
+    mod._oauth_bind_host = "127.0.0.1"
+    mod._configure_callback_port({"redirect_port": 54322, "redirect_bind": "0.0.0.0"})
+    assert mod._oauth_bind_host == "0.0.0.0"
+
+
+def test_configure_callback_port_bind_host_defaults_to_loopback():
+    """No redirect_bind → bind host stays loopback (backwards compatible)."""
+    import tools.mcp_oauth as mod
+
+    mod._oauth_bind_host = "0.0.0.0"  # ensure the default is actively applied
+    mod._configure_callback_port({"redirect_port": 54323})
+    assert mod._oauth_bind_host == "127.0.0.1"
+
+
+def test_configure_callback_port_empty_bind_host_falls_back_to_loopback():
+    """An empty redirect_bind is treated as unset → loopback."""
+    import tools.mcp_oauth as mod
+
+    mod._oauth_bind_host = "0.0.0.0"
+    mod._configure_callback_port({"redirect_port": 54324, "redirect_bind": ""})
+    assert mod._oauth_bind_host == "127.0.0.1"
+
+
+def test_find_free_port_accepts_explicit_host():
+    """_find_free_port probes on the given interface (loopback here)."""
+    from tools.mcp_oauth import _find_free_port
+
+    port = _find_free_port("127.0.0.1")
+    assert 1024 < port < 65536
+
+
 _PROXY_REDIRECT = "https://oauth.example.ts.net/callback"
 
 

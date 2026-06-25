@@ -95,6 +95,15 @@ class OAuthNonInteractiveError(RuntimeError):
 # tests can verify the callback server and the redirect_uri share a port.
 _oauth_port: int | None = None
 
+# Interface the callback HTTPServer binds to.  Defaults to loopback (the
+# safe, historical behaviour).  Set from ``oauth.redirect_bind`` by
+# _configure_callback_port.  A non-loopback bind (e.g. "0.0.0.0" or a LAN IP)
+# lets a reverse proxy on a *different* host forward the OAuth callback to this
+# listener — our HAProxy topology, where the proxy cannot reach the LXC's
+# loopback.  This is opt-in and intended to run behind a firewall (the port
+# reachable only via the proxy), mirroring the dashboard ``--insecure`` bind.
+_oauth_bind_host: str = "127.0.0.1"
+
 
 # Skip tokens accepted at the paste prompt — exit OAuth without auth.
 _SKIP_TOKENS = frozenset({"skip", "cancel", "s", "n", "no", "q", "quit"})
@@ -130,10 +139,15 @@ def _safe_filename(name: str) -> str:
     return re.sub(r"[^\w\-]", "_", name).strip("_")[:128] or "default"
 
 
-def _find_free_port() -> int:
-    """Find an available TCP port on localhost."""
+def _find_free_port(host: str = "127.0.0.1") -> int:
+    """Find an available TCP port on ``host``.
+
+    Probes on the same interface the callback server will bind to, so an
+    auto-picked port is actually free on that interface (not just loopback)
+    when ``oauth.redirect_bind`` selects a non-loopback address.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
+        s.bind((host, 0))
         return s.getsockname()[1]
 
 
@@ -497,9 +511,11 @@ async def _wait_for_callback() -> tuple[str, str | None]:
     # We just need to poll for the result.
     handler_cls, result = _make_callback_handler()
 
-    # Start a temporary server on the known port
+    # Start a temporary server on the known port. Binds to _oauth_bind_host
+    # (loopback by default; a routable address when oauth.redirect_bind is set
+    # so a cross-host reverse proxy can deliver the callback).
     try:
-        server = HTTPServer(("127.0.0.1", _oauth_port), handler_cls)
+        server = HTTPServer((_oauth_bind_host, _oauth_port), handler_cls)
     except OSError:
         # Port already in use — the server from build_oauth_auth is running.
         # Fall back to polling the server started by build_oauth_auth.
@@ -671,10 +687,15 @@ def _configure_callback_port(cfg: dict) -> int:
     the root cause of issue #5344 (port collision on concurrent OAuth
     flows); replacing it with a ContextVar is out of scope for this
     consolidation PR.
+
+    Also resolves the bind interface from ``oauth.redirect_bind`` into the
+    module-level ``_oauth_bind_host`` (default loopback), set *before* the
+    free-port probe so the probe runs on the chosen interface.
     """
-    global _oauth_port
+    global _oauth_port, _oauth_bind_host
+    _oauth_bind_host = cfg.get("redirect_bind") or "127.0.0.1"
     requested = int(cfg.get("redirect_port", 0))
-    port = _find_free_port() if requested == 0 else requested
+    port = _find_free_port(_oauth_bind_host) if requested == 0 else requested
     cfg["_resolved_port"] = port
     _oauth_port = port  # legacy consumer: _wait_for_callback reads this
     return port
