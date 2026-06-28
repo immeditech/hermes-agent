@@ -31,6 +31,7 @@ set -euo pipefail
 #           adapter.py); #44700 selbst am 2026-06-28 als überholt geschlossen.
 UPSTREAM_PRS=(
   47755  # fix(mcp-oauth): allow configurable redirect_uri for MCP OAuth flows
+  42300  # feat(secrets): native Vaultwarden / bw CLI secret source (Closes #33126)
 )
 
 ORIGIN_REMOTE="origin"      # immeditech/hermes-agent
