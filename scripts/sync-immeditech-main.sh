@@ -26,8 +26,10 @@ set -euo pipefail
 
 # --- Kuratierte Upstream-PR-Nummern (NousResearch/hermes-agent) -------------
 # Hier neue PRs ergänzen / erledigte entfernen.
+# Erledigt & entfernt:
+#   44700 → upstream gemerged via #54129 (rebased auf plugins/platforms/matrix/
+#           adapter.py); #44700 selbst am 2026-06-28 als überholt geschlossen.
 UPSTREAM_PRS=(
-  44700  # fix(matrix): record DM rooms in m.direct on invite to prevent group misclassification
   47755  # fix(mcp-oauth): allow configurable redirect_uri for MCP OAuth flows
 )
 
