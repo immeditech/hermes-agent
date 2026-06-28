@@ -54,7 +54,19 @@ def _make_invite_event(
 
 
 class TestOnInviteRecordsDM:
-    """_on_invite should call _record_dm_room when is_direct is True."""
+    """_on_invite schedules a join that records the DM when is_direct is True.
+
+    The join itself is non-blocking (``_schedule_invite_join`` spawns a task),
+    so these tests drive ``_on_invite`` and then await the scheduled task to
+    observe its side effects.
+    """
+
+    @staticmethod
+    async def _drain_invite_tasks(adapter):
+        """Await any tasks _schedule_invite_join spawned."""
+        tasks = list(adapter._invite_join_tasks.values())
+        for task in tasks:
+            await task
 
     @pytest.mark.asyncio
     async def test_dm_invite_records_room(self):
@@ -64,6 +76,7 @@ class TestOnInviteRecordsDM:
 
         event = _make_invite_event(is_direct=True, sender="@alice:example.org")
         await adapter._on_invite(event)
+        await self._drain_invite_tasks(adapter)
 
         adapter._join_room_by_id.assert_awaited_once_with("!dm_room:example.org")
         adapter._record_dm_room.assert_awaited_once_with(
@@ -78,6 +91,7 @@ class TestOnInviteRecordsDM:
 
         event = _make_invite_event(is_direct=False)
         await adapter._on_invite(event)
+        await self._drain_invite_tasks(adapter)
 
         adapter._join_room_by_id.assert_awaited_once()
         adapter._record_dm_room.assert_not_awaited()
@@ -95,6 +109,7 @@ class TestOnInviteRecordsDM:
             content=SimpleNamespace(),  # no is_direct attr
         )
         await adapter._on_invite(event)
+        await self._drain_invite_tasks(adapter)
 
         adapter._record_dm_room.assert_not_awaited()
 
@@ -106,6 +121,7 @@ class TestOnInviteRecordsDM:
 
         event = _make_invite_event(is_direct=True)
         await adapter._on_invite(event)
+        await self._drain_invite_tasks(adapter)
 
         adapter._record_dm_room.assert_not_awaited()
 
@@ -121,6 +137,7 @@ class TestOnInviteRecordsDM:
             content=SimpleNamespace(is_direct=True),
         )
         await adapter._on_invite(event)
+        await self._drain_invite_tasks(adapter)
 
         adapter._record_dm_room.assert_not_awaited()
 
