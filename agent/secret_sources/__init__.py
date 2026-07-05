@@ -10,9 +10,4 @@ Currently shipped:
   - ``bitwarden`` — Bitwarden Secrets Manager (``bws`` CLI).  See
     ``agent.secret_sources.bitwarden`` for the integration and
     ``hermes_cli.secrets_cli`` for the user-facing setup wizard.
-
-  - ``vaultwarden`` — Vaultwarden / Bitwarden Password Manager (``bw`` CLI).
-    For self-hosted Vaultwarden instances (which implement the Password Manager
-    API, not Secrets Manager).  See ``agent.secret_sources.vaultwarden`` and
-    ``hermes_cli.vaultwarden_cli``.
 """
