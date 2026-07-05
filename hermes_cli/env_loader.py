@@ -78,8 +78,6 @@ def format_secret_source_suffix(env_var: str) -> str:
         return ""
     if source == "bitwarden":
         return " (from Bitwarden)"
-    if source == "vaultwarden":
-        return " (from Vaultwarden)"
     # Generic fallback — future-proofing for additional secret sources
     # (e.g. 1Password, HashiCorp Vault) without having to update every
     # call site.
@@ -327,23 +325,6 @@ def _apply_external_secret_sources(home_path: Path) -> None:
                 home_path=home_path,
             )
             _report_secret_source_result(result, "Bitwarden Secrets Manager", "bitwarden")
-
-    vw_cfg = (cfg or {}).get("vaultwarden") or {}
-    if vw_cfg.get("enabled"):
-        try:
-            from agent.secret_sources.vaultwarden import apply_vaultwarden_secrets
-        except ImportError:
-            pass
-        else:
-            result = apply_vaultwarden_secrets(
-                enabled=True,
-                session_env=vw_cfg.get("session_env", "BW_SESSION"),
-                item_name=vw_cfg.get("item_name", ""),
-                override_existing=bool(vw_cfg.get("override_existing", False)),
-                cache_ttl_seconds=float(vw_cfg.get("cache_ttl_seconds", 300)),
-                home_path=home_path,
-            )
-            _report_secret_source_result(result, "Vaultwarden", "vaultwarden")
 
 
 def _report_secret_source_result(result: object, label: str, source_key: str) -> None:

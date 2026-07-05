@@ -29,9 +29,11 @@ set -euo pipefail
 # Erledigt & entfernt:
 #   44700 → upstream gemerged via #54129 (rebased auf plugins/platforms/matrix/
 #           adapter.py); #44700 selbst am 2026-06-28 als überholt geschlossen.
+#   42300 → am 2026-07-05 wieder entfernt. Vaultwarden→Env degradiert VW zum
+#           flachen Env-Beutel; ersetzt durch einen eigenen Broker
+#           (immeditech/hermes-credential-broker). NICHT wieder aufnehmen.
 UPSTREAM_PRS=(
   47755  # fix(mcp-oauth): allow configurable redirect_uri for MCP OAuth flows
-  42300  # feat(secrets): native Vaultwarden / bw CLI secret source (Closes #33126)
 )
 
 ORIGIN_REMOTE="origin"      # immeditech/hermes-agent
