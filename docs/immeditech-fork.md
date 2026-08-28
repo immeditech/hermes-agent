@@ -37,19 +37,32 @@ Das ist jetzt das **komplette** Delta gegenüber `upstream/main`:
 
 | Was | Wo | Warum |
 |-----|----|-------|
-| `oauth.redirect_bind` | `tools/mcp_oauth.py`, Tests `TestRedirectBind` | Der OAuth-Callback-Listener bindet upstream **hart auf Loopback**. Unsere HAProxy steht auf einem *anderen* Host und kann den Loopback des Agent-LXC nicht erreichen. Opt-in, Default Loopback → rückwärtskompatibel. **Nicht** zu verwechseln mit upstreams `redirect_host` (#63889), das nur den Hostnamen in der *angekündigten* URI umschreibt. |
 | `HERMES_UPDATE_BRANCH` | `hermes_cli/main.py` | `hermes update` ohne `--branch` soll unserem Fork-Branch folgen, nicht dem Upstream-Mirror `main`. Die Ansible-Rolle setzt die Variable in `~/.hermes/.env`. |
 | Devcontainer + Sync-Skript + dieses Dok | `.devcontainer/`, `scripts/sync-immeditech-main.sh`, `docs/immeditech-fork.md` | Arbeitsumgebung und Sync-Mechanik |
 
-Der `redirect_bind`-Patch ist als Upstream-PR vorgesehen — das Gate (Maintainer-Signal
-auf #29299 **+** Merge von #47755) ist seit 2026-07-16 erfüllt. Stand und Argumentation:
-`docs/11-mcp-oauth-redirect-bind.md` im Doku-Repo (`AgentSpace/hermes-workspace`).
+### Fallengelassen: `oauth.redirect_bind` (2026-08-28)
 
-> **Beim Merge beachten:** upstream hat mit #22161 eine **zweite Bindstelle**
-> eingeführt (`_reserve_callback_port()` reserviert den Port schon bei der Auswahl).
-> Unser Patch muss beide Stellen treffen, sonst binden Reservierung und HTTPServer
-> auf verschiedene Interfaces. `TestRedirectBind::test_reserve_callback_port_honors_bind_host`
-> ist der Regressionsschutz dafür.
+Der Patch liess den OAuth-Callback-Listener auf ein routbares Interface binden
+statt auf Loopback — gedacht für eine HAProxy auf einem *anderen* Host
+(Option A, `docs/10`/`docs/11` im Doku-Repo). Gewonnen hat **Option B**: der
+Webservice `immeditech/hermes-mcp-login` fährt den OAuth-Flow selbst und
+**ist** das Redirect-Ziel (`config.py`: `redirect_uri =
+<public_base>/mcp/<name>/callback`, `app.py`: eigene `/callback`-Route auf
+`:9120` hinter der HAProxy). Der Loopback-Listener aus `tools/mcp_oauth.py`
+wird in diesem Flow nie gestartet — der Service sagt das im eigenen Code:
+*„because we own the redirect_uri value, there is nothing to resolve"*.
+
+Entsprechend war `oauth.redirect_bind` auf keinem der fünf Agenten je gesetzt;
+der Default blieb überall Loopback, also exakt upstream-Verhalten. Gehalten
+hätte der Patch nur Kosten: er greift an drei Bindstellen, upstream hat am
+2026-08-18 mit der CIMD-Auth (`_reserve_cimd_port`) eine **vierte** ergänzt,
+und die mcp-SDK-2.0-Migration schreibt das Modul ohnehin um.
+
+Entfernt am 2026-08-28. Code und Begründung bleiben in der Git-Historie
+(`4be194fac`) und in `docs/11-mcp-oauth-redirect-bind.md` des Doku-Repos —
+falls der Upstream-Beitrag doch noch gewollt ist, wird er günstiger neu gegen
+den Stand *nach* der SDK-2.0-Migration abgeleitet als durch jeden Sync
+mitgeschleppt.
 
 ## Aktualisieren (wenn `main` sich bewegt)
 

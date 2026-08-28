@@ -31,7 +31,6 @@ Configuration in config.yaml::
           redirect_port: 0                      # 0 = auto-pick free port
           redirect_uri: "https://proxy/callback"  # default: loopback callback
           redirect_host: "localhost"            # loopback hostname (WAF-safe)
-          redirect_bind: "0.0.0.0"              # listener interface (immeditech)
           client_name: "My Custom Client"       # default: "Hermes Agent"
 """
 
@@ -147,19 +146,6 @@ class OAuthNonInteractiveError(RuntimeError):
 # Port used by the most recent build_oauth_auth() call.  Exposed so that
 # tests can verify the callback server and the redirect_uri share a port.
 _oauth_port: int | None = None
-
-# Interface the callback HTTPServer binds to.  Defaults to loopback (the
-# safe, historical behaviour).  Set from ``oauth.redirect_bind`` by
-# _configure_callback_port.  A non-loopback bind (e.g. "0.0.0.0" or a LAN IP)
-# lets a reverse proxy on a *different* host forward the OAuth callback to this
-# listener — our HAProxy topology, where the proxy cannot reach the LXC's
-# loopback.  This is opt-in and intended to run behind a firewall (the port
-# reachable only via the proxy), mirroring the dashboard ``--insecure`` bind.
-#
-# Distinct from ``redirect_host`` (upstream #63889), which only rewrites the
-# hostname in the *advertised* redirect URI — the listener stays on loopback.
-_oauth_bind_host: str = "127.0.0.1"
-
 # Interactivity gate for OAuth stdin prompts. A ContextVar (NOT threading.local)
 # is required: background MCP discovery sets this on the discovery thread, but
 # the actual connect+OAuth runs on the dedicated `mcp-event-loop` thread via
@@ -212,15 +198,10 @@ def _safe_filename(name: str) -> str:
     return re.sub(r"[^\w\-]", "_", name).strip("_")[:128] or "default"
 
 
-def _find_free_port(host: str | None = None) -> int:
-    """Find an available TCP port on ``host`` (default: the configured bind).
-
-    Probes on the same interface the callback server will bind to, so an
-    auto-picked port is actually free on that interface (not just loopback)
-    when ``oauth.redirect_bind`` selects a non-loopback address.
-    """
+def _find_free_port() -> int:
+    """Find an available TCP port on localhost."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((host or _oauth_bind_host, 0))
+        s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
@@ -244,10 +225,7 @@ def _reserve_callback_port() -> int:
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        # Reserve on the interface the listener will actually bind to
-        # (``oauth.redirect_bind``, loopback by default) — otherwise the
-        # reservation and the later HTTPServer bind could disagree.
-        s.bind((_oauth_bind_host, 0))
+        s.bind(("127.0.0.1", 0))
     except OSError:
         s.close()
         raise
@@ -889,7 +867,7 @@ def _make_callback_waiter(port: int):
         # (#44590).
         try:
             server = HTTPServer(
-                (_oauth_bind_host, port), handler_cls, bind_and_activate=False
+                ("127.0.0.1", port), handler_cls, bind_and_activate=False
             )
             reserved = _reserved_sockets.pop(port, None)
             if reserved is not None:
@@ -1091,13 +1069,8 @@ def _configure_callback_port(
     the root cause of issue #5344 (port collision on concurrent OAuth
     flows); replacing it with a ContextVar is out of scope for this
     consolidation PR.
-
-    Also resolves the bind interface from ``oauth.redirect_bind`` into the
-    module-level ``_oauth_bind_host`` (default loopback), set *before* the
-    port is reserved so the reservation lands on the chosen interface.
     """
-    global _oauth_port, _oauth_bind_host
-    _oauth_bind_host = cfg.get("redirect_bind") or "127.0.0.1"
+    global _oauth_port
     from tools.mcp_dashboard_oauth import get_dashboard_oauth_flow
 
     dashboard_flow = get_dashboard_oauth_flow()

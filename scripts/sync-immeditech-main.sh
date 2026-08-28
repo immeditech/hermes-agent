@@ -34,12 +34,10 @@ set -euo pipefail
 #           (immeditech/hermes-credential-broker). NICHT wieder aufnehmen.
 #   47755 → am 2026-08-12 entfernt: upstream gemerged via #65610 (Salvage,
 #           Autorschaft erhalten) + redirect_host aus #63889. Kommt seither
-#           über den main-Mirror. ACHTUNG: upstream hat dabei umgebaut
-#           (_make_redirect_handler-Closure statt functools.partial), unser
-#           oauth.redirect_bind wurde beim Merge darauf neu aufgesetzt.
+#           über den main-Mirror.
 #
 # Die Liste ist derzeit LEER — immeditech-main = upstream/main + nur noch
-# unsere eigenen Patches (redirect_bind, HERMES_UPDATE_BRANCH, Devcontainer).
+# unsere eigenen Patches (HERMES_UPDATE_BRANCH, Devcontainer).
 # Das ist der Zielzustand; neue Einträge bitte nur, wenn ein Upstream-PR
 # wirklich unverzichtbar ist, bevor er dort gemerged wird.
 UPSTREAM_PRS=()
