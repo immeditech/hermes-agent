@@ -37,7 +37,7 @@ Das ist jetzt das **komplette** Delta gegenüber `upstream/main`:
 
 | Was | Wo | Warum |
 |-----|----|-------|
-| `HERMES_UPDATE_BRANCH` | `hermes_cli/main.py` | `hermes update` ohne `--branch` soll unserem Fork-Branch folgen, nicht dem Upstream-Mirror `main`. Die Ansible-Rolle setzt die Variable in `~/.hermes/.env`. |
+| `HERMES_UPDATE_BRANCH` | `hermes_cli/subcommands/update.py` (Default von `--branch`) | `hermes update` ohne `--branch` soll unserem Fork-Branch folgen. Seit den Update-Channels (v0.22/0.23) löst ein Fork ohne `--branch` auf den Channel `main` auf, also auf `origin/main` (den Upstream-Mirror). Der Patch setzt den `--branch`-Default aus der Env, damit Channel-Auswahl, `--check` und Apply-Ziel denselben expliziten Branch-Pfad nehmen. Die Ansible-Rolle setzt die Variable im Managed Scope `/etc/hermes/.env`. Bis 2026-11 lag der Patch in `_resolve_update_branch` (`hermes_cli/main.py`) — upstream hat die Funktion nach `main_install_repair.py` verschoben, und sie allein reicht seit den Channels nicht mehr. |
 | Devcontainer + Sync-Skript + dieses Dok | `.devcontainer/`, `scripts/sync-immeditech-main.sh`, `docs/immeditech-fork.md` | Arbeitsumgebung und Sync-Mechanik |
 
 ### Fallengelassen: `oauth.redirect_bind` (2026-08-28)
@@ -65,6 +65,11 @@ den Stand *nach* der SDK-2.0-Migration abgeleitet als durch jeden Sync
 mitgeschleppt.
 
 ## Aktualisieren (wenn `main` sich bewegt)
+
+**Stand 2026-11-12:** auf den Stable-Release **v0.23.1** gemerged (Tag, nicht
+`main`-Tip — upstream-`main` ist inzwischen Canary-Stand). Für künftige Syncs
+bevorzugt den jeweils neuesten `vX.Y.Z`-Tag mergen (`git merge vX.Y.Z`) statt
+das Skript, das `main` spiegelt und merged.
 
 ```bash
 scripts/sync-immeditech-main.sh
